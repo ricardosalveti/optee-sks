@@ -699,10 +699,14 @@ uint32_t entry_get_attribute_value(uintptr_t tee_session, TEE_Param *ctrl,
 
 	TEE_MemFill(&ctrlargs, 0, sizeof(ctrlargs));
 
+	IMSG("RSALVETI: %s:%d\n", __FUNCTION__, __LINE__);
+
 	if (!ctrl || in || !out)
 		return SKS_BAD_PARAM;
 
 	serialargs_init(&ctrlargs, ctrl->memref.buffer, ctrl->memref.size);
+
+	IMSG("RSALVETI: %s:%d memref size: %d\n", __FUNCTION__, __LINE__, ctrl->memref.size);
 
 	rv = serialargs_get(&ctrlargs, &session_handle, sizeof(uint32_t));
 	if (rv)
@@ -716,11 +720,14 @@ uint32_t entry_get_attribute_value(uintptr_t tee_session, TEE_Param *ctrl,
 	if (rv)
 		return rv;
 
+	IMSG("RSALVETI: %s:%d template populated\n", __FUNCTION__, __LINE__);
+
 	session = sks_handle2session(session_handle, tee_session);
 	if (!session) {
 		rv = SKS_CKR_SESSION_HANDLE_INVALID;
 		goto bail;
 	}
+
 
 	obj = sks_handle2object(object_handle, session);
 	if (!obj) {
@@ -733,6 +740,8 @@ uint32_t entry_get_attribute_value(uintptr_t tee_session, TEE_Param *ctrl,
 		rv = SKS_CKR_OBJECT_HANDLE_INVALID;
 		goto bail;
 	}
+
+	IMSG("RSALVETI: %s:%d got session and object\n", __FUNCTION__, __LINE__);
 
 	/* iterate over attributes and set their values */
 	/*
@@ -766,7 +775,11 @@ uint32_t entry_get_attribute_value(uintptr_t tee_session, TEE_Param *ctrl,
 		struct sks_attribute_head *cli_ref =
 			(struct sks_attribute_head *)(void *)cur;
 
+		IMSG("RSALVETI: %s:%d got cli_ref\n", __FUNCTION__, __LINE__);
+
 		len = sizeof(*cli_ref) + cli_ref->size;
+
+		IMSG("RSALVETI: %s:%d got len %d\n", __FUNCTION__, __LINE__, len);
 
 		/* Check 1. */
 		if (!attribute_is_exportable(cli_ref, obj)) {
@@ -775,6 +788,8 @@ uint32_t entry_get_attribute_value(uintptr_t tee_session, TEE_Param *ctrl,
 			continue;
 		}
 
+		IMSG("RSALVETI: %s:%d getting attribute\n", __FUNCTION__, __LINE__);
+
 		/*
 		 * We assume that if size is 0, pValue was NULL, so we return
 		 * the size of the required buffer for it (3., 4.)
@@ -782,6 +797,9 @@ uint32_t entry_get_attribute_value(uintptr_t tee_session, TEE_Param *ctrl,
 		rv = get_attribute(obj->attributes, cli_ref->id,
 				   cli_ref->size ? cli_ref->data : NULL,
 				   &(cli_ref->size));
+
+		IMSG("RSALVETI: %s:%d got attribute\n", __FUNCTION__, __LINE__);
+
 		/* Check 2. */
 		switch (rv) {
 		case SKS_OK:
@@ -798,6 +816,8 @@ uint32_t entry_get_attribute_value(uintptr_t tee_session, TEE_Param *ctrl,
 			goto bail;
 		}
 	}
+
+	IMSG("RSALVETI: %s:%d setting rv\n", __FUNCTION__, __LINE__);
 
 	/*
 	 * If case 1 applies to any of the requested attributes, then the call
@@ -818,10 +838,12 @@ uint32_t entry_get_attribute_value(uintptr_t tee_session, TEE_Param *ctrl,
 	if (buffer_too_small)
 		rv = SKS_CKR_BUFFER_TOO_SMALL;
 
+	IMSG("RSALVETI: %s:%d moving template to out buffer\n", __FUNCTION__, __LINE__);
+
 	/* Move updated template to out buffer */
 	TEE_MemMove(out->memref.buffer, template, out->memref.size);
 
-	DMSG("SKSs%" PRIu32 ": get attributes 0x%" PRIx32,
+	IMSG("SKSs%" PRIu32 ": get attributes 0x%" PRIx32,
 	     session_handle, object_handle);
 
 bail:
